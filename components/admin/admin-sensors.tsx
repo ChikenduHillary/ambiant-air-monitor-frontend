@@ -5,6 +5,7 @@ import { Download, Trash2, Loader2, RefreshCw, Filter } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { adminApi, getToken, type SensorReading } from "@/lib/api"
 
 function aqiBadge(aqi: number) {
@@ -124,7 +125,15 @@ export function AdminSensors() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={7} className="text-center py-12 text-muted-foreground text-sm">Loading…</td></tr>
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <tr key={i} className="border-b border-border/50">
+                      {Array.from({ length: 7 }).map((__, j) => (
+                        <td key={j} className="px-4 py-3">
+                          <Skeleton className="h-4 w-full" />
+                        </td>
+                      ))}
+                    </tr>
+                  ))
                 ) : readings.length === 0 ? (
                   <tr><td colSpan={7} className="text-center py-12 text-muted-foreground text-sm">No readings found</td></tr>
                 ) : readings.map((r) => (

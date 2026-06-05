@@ -16,6 +16,7 @@ import {
 import { Calendar, TrendingDown, TrendingUp, RefreshCw } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import { sensors, type DailyAggregate } from "@/lib/api"
 
 function getHeatColor(aqi: number) {
@@ -137,12 +138,22 @@ export function HistoryTrends() {
           return (
             <Card key={stat.label} className="border shadow-sm">
               <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{stat.label}</p>
-                  <Icon className={`h-4 w-4 ${stat.iconColor}`} />
-                </div>
-                <p className="text-2xl font-bold text-foreground tabular-nums">{stat.value}</p>
-                <p className="text-xs text-muted-foreground mt-1">{stat.sub}</p>
+                {loading ? (
+                  <div className="flex flex-col gap-2.5">
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-8 w-20" />
+                    <Skeleton className="h-3 w-28" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-start justify-between mb-3">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{stat.label}</p>
+                      <Icon className={`h-4 w-4 ${stat.iconColor}`} />
+                    </div>
+                    <p className="text-2xl font-bold text-foreground tabular-nums">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{stat.sub}</p>
+                  </>
+                )}
               </CardContent>
             </Card>
           )
@@ -157,7 +168,7 @@ export function HistoryTrends() {
         <CardContent className="px-2 pb-4">
           <div className="h-64">
             {loading
-              ? <div className="h-full flex items-center justify-center text-muted-foreground text-sm">Loading chart…</div>
+              ? <Skeleton className="h-full w-full rounded-xl" />
               : (
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={chartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
@@ -186,7 +197,13 @@ export function HistoryTrends() {
         </CardHeader>
         <CardContent className="px-5 pb-5">
           {loading
-            ? <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Loading…</div>
+            ? (
+              <div className="grid grid-cols-7 gap-1.5">
+                {Array.from({ length: 42 }).map((_, i) => (
+                  <Skeleton key={i} className="h-10 rounded-lg" />
+                ))}
+              </div>
+            )
             : (
               <>
                 <div className="grid grid-cols-7 gap-1.5">

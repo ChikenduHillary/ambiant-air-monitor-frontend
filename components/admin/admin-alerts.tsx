@@ -5,6 +5,7 @@ import { AlertTriangle, CheckCircle2, Info, Trash2, Loader2, RefreshCw, Send, Ch
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { adminApi, type Alert } from "@/lib/api"
 
 const LEVEL_STYLES = {
@@ -112,7 +113,17 @@ export function AdminAlerts() {
         <Card className="border shadow-sm">
           <CardContent className="p-0">
             {loading ? (
-              <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">Loading…</div>
+              <div className="divide-y divide-border">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-start gap-3 px-4 py-4">
+                    <div className="flex-1 flex flex-col gap-2">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-3 w-32" />
+                    </div>
+                    <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
+                  </div>
+                ))}
+              </div>
             ) : alertList.length === 0 ? (
               <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">No alerts yet</div>
             ) : (

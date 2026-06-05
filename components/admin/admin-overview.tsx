@@ -4,13 +4,14 @@ import { useEffect, useState } from "react"
 import { Users, Activity, Bell, Heart, TrendingUp, Wifi, RefreshCw, Clock } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import { adminApi, type AdminStats } from "@/lib/api"
 
 function StatCard({
-  label, value, sub, icon: Icon, iconColor, accent,
+  label, value, sub, icon: Icon, iconColor, accent, loading,
 }: {
   label: string; value: string | number; sub?: string
-  icon: React.ElementType; iconColor: string; accent: string
+  icon: React.ElementType; iconColor: string; accent: string; loading?: boolean
 }) {
   return (
     <Card className="border shadow-sm">
@@ -20,9 +21,9 @@ function StatCard({
             <Icon className={`h-5 w-5 ${iconColor}`} />
           </div>
         </div>
-        <p className="text-2xl font-bold text-foreground tabular-nums">{value}</p>
+        {loading ? <Skeleton className="h-8 w-20 mb-1" /> : <p className="text-2xl font-bold text-foreground tabular-nums">{value}</p>}
         <p className="text-sm font-medium text-foreground mt-0.5">{label}</p>
-        {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
+        {sub && (loading ? <Skeleton className="h-3 w-24 mt-0.5" /> : <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>)}
       </CardContent>
     </Card>
   )
@@ -78,11 +79,11 @@ export function AdminOverview() {
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Users"     value={loading ? "…" : s?.total_users ?? 0}    icon={Users}    iconColor="text-primary"       accent="bg-primary/10" />
-        <StatCard label="Sensor Readings" value={loading ? "…" : s?.total_readings ?? 0} icon={Activity} iconColor="text-emerald-500"  accent="bg-emerald-500/10" />
-        <StatCard label="Active Alerts"   value={loading ? "…" : s?.active_alerts ?? 0}  icon={Bell}     iconColor="text-orange-500"   accent="bg-orange-500/10"
+        <StatCard label="Total Users"     value={s?.total_users ?? 0}    loading={loading} icon={Users}    iconColor="text-primary"      accent="bg-primary/10" />
+        <StatCard label="Sensor Readings" value={s?.total_readings ?? 0} loading={loading} icon={Activity} iconColor="text-emerald-500" accent="bg-emerald-500/10" />
+        <StatCard label="Active Alerts"   value={s?.active_alerts ?? 0}  loading={loading} icon={Bell}     iconColor="text-orange-500"  accent="bg-orange-500/10"
           sub={`${s?.total_alerts ?? 0} total`} />
-        <StatCard label="Symptom Events"  value={loading ? "…" : s?.total_symptoms ?? 0} icon={Heart}    iconColor="text-rose-500"     accent="bg-rose-500/10" />
+        <StatCard label="Symptom Events"  value={s?.total_symptoms ?? 0} loading={loading} icon={Heart}    iconColor="text-rose-500"    accent="bg-rose-500/10" />
       </div>
 
       {/* Second row */}
@@ -94,7 +95,10 @@ export function AdminOverview() {
           </CardHeader>
           <CardContent className="px-5 pb-5">
             {loading ? (
-              <div className="h-16 flex items-center text-muted-foreground text-sm">Loading…</div>
+              <div className="flex items-end gap-3 pt-2">
+                <Skeleton className="h-10 w-20" />
+                <Skeleton className="h-6 w-20 mb-1 rounded-full" />
+              </div>
             ) : (
               <div className="flex items-end gap-3">
                 <span className="text-4xl font-bold tabular-nums" style={{
@@ -153,7 +157,7 @@ export function AdminOverview() {
             ].map(({ label, value }) => (
               <div key={label} className="flex justify-between">
                 <span className="text-muted-foreground">{label}</span>
-                <span className="font-semibold tabular-nums text-foreground">{loading ? "…" : value}</span>
+                {loading ? <Skeleton className="h-4 w-14" /> : <span className="font-semibold tabular-nums text-foreground">{value}</span>}
               </div>
             ))}
           </CardContent>

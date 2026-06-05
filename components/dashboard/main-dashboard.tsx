@@ -24,6 +24,7 @@ import {
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { sensors, alerts as alertsApi, type SensorReading, type Alert } from "@/lib/api"
 
 function getAqiCategory(aqi: number) {
@@ -231,9 +232,10 @@ export function MainDashboard() {
                       Air Quality Index
                     </span>
                   </div>
-                  <h2 className="text-3xl font-bold" style={{ color: aqiCategory.color }}>
-                    {reading ? aqiCategory.label : "Loading…"}
-                  </h2>
+                  {reading
+                    ? <h2 className="text-3xl font-bold" style={{ color: aqiCategory.color }}>{aqiCategory.label}</h2>
+                    : <Skeleton className="h-9 w-32 mt-1" />
+                  }
                   <p className="text-sm text-muted-foreground dark:text-white/60 mt-1">
                     {exceeded
                       ? "Conditions elevated. Limit prolonged exertion outdoors."
@@ -245,12 +247,15 @@ export function MainDashboard() {
                   {[
                     { label: "Personal Risk",  value: exceeded ? "Elevated" : "Normal",    color: statColors.risk },
                     { label: "Forecast",        value: "Improving",                         color: statColors.forecast },
-                    { label: "Peak Today",      value: reading ? `AQI ${aqiValue}` : "—",  color: statColors.peak },
-                    { label: "Last Updated",    value: reading ? "Just now" : "—",          color: statColors.updated },
+                    { label: "Peak Today",      value: reading ? `AQI ${aqiValue}` : null,  color: statColors.peak },
+                    { label: "Last Updated",    value: reading ? "Just now" : null,          color: statColors.updated },
                   ].map((item) => (
                     <div key={item.label} className="bg-black/4 dark:bg-white/5 rounded-xl p-3">
                       <p className="text-xs text-muted-foreground dark:text-white/50 uppercase tracking-wider">{item.label}</p>
-                      <p className="text-sm font-semibold mt-0.5" style={{ color: item.color }}>{item.value}</p>
+                      {item.value !== null
+                        ? <p className="text-sm font-semibold mt-0.5" style={{ color: item.color }}>{item.value}</p>
+                        : <Skeleton className="h-4 w-16 mt-1" />
+                      }
                     </div>
                   ))}
                 </div>
@@ -260,11 +265,25 @@ export function MainDashboard() {
         </Card>
 
         {/* Sensor Cards */}
-        {sensorDefs.length > 0 && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {sensorDefs.map((s) => <SensorCard key={s.label} {...s} />)}
-          </div>
-        )}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {sensorDefs.length > 0
+            ? sensorDefs.map((s) => <SensorCard key={s.label} {...s} />)
+            : Array.from({ length: 4 }).map((_, i) => (
+                <Card key={i} className="border shadow-sm">
+                  <CardContent className="p-4 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-9 w-9 rounded-xl" />
+                      <Skeleton className="h-4 w-10" />
+                    </div>
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-7 w-24" />
+                    <Skeleton className="h-1.5 w-full rounded-full" />
+                    <Skeleton className="h-3 w-28" />
+                  </CardContent>
+                </Card>
+              ))
+          }
+        </div>
 
         {/* Trigger Threshold Status */}
         <Card className={`border-2 ${exceeded ? "border-orange-500/40 bg-orange-500/5" : "border-emerald-500/40 bg-emerald-500/5"}`}>
@@ -324,9 +343,20 @@ export function MainDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="px-5 pb-5 flex flex-col gap-3">
-            {alertList.length === 0
-              ? <p className="text-sm text-muted-foreground text-center py-4">No alerts yet</p>
-              : alertList.map((a) => <AlertItem key={a.id} alert={a} />)}
+            {!reading
+              ? Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="flex gap-3 border-l-2 border-muted pl-3 py-2.5 rounded-r-lg bg-muted/30">
+                    <Skeleton className="h-4 w-4 rounded-full shrink-0 mt-0.5" />
+                    <div className="flex-1 flex flex-col gap-2">
+                      <Skeleton className="h-3.5 w-full" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                  </div>
+                ))
+              : alertList.length === 0
+                ? <p className="text-sm text-muted-foreground text-center py-4">No alerts yet</p>
+                : alertList.map((a) => <AlertItem key={a.id} alert={a} />)
+            }
           </CardContent>
         </Card>
 
@@ -337,18 +367,23 @@ export function MainDashboard() {
           <CardContent className="px-5 pb-4 flex flex-col gap-3">
             {reading
               ? [
-                  { label: "PM2.5",       value: `${reading.pm25.toFixed(1)} µg/m³`,  color: "text-foreground" },
-                  { label: "VOC / CO₂",   value: `${reading.voc} ppm`,               color: "text-foreground" },
-                  { label: "Temperature", value: `${reading.temperature.toFixed(1)}°C`, color: "text-foreground" },
-                  { label: "Humidity",    value: `${reading.humidity}%`,              color: "text-foreground" },
-                  { label: "AQI",         value: `${reading.aqi}`,                    color: `text-[${aqiCategory.color}]` },
+                  { label: "PM2.5",       value: `${reading.pm25.toFixed(1)} µg/m³` },
+                  { label: "VOC / CO₂",   value: `${reading.voc} ppm` },
+                  { label: "Temperature", value: `${reading.temperature.toFixed(1)}°C` },
+                  { label: "Humidity",    value: `${reading.humidity}%` },
+                  { label: "AQI",         value: `${reading.aqi}` },
                 ].map((stat) => (
                   <div key={stat.label} className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">{stat.label}</span>
                     <span className="font-semibold tabular-nums text-foreground">{stat.value}</span>
                   </div>
                 ))
-              : <p className="text-sm text-muted-foreground text-center py-3">Loading…</p>
+              : Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-4 w-16" />
+                  </div>
+                ))
             }
           </CardContent>
         </Card>
