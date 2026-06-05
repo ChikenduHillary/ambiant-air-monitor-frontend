@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { adminApi, type AdminUser } from "@/lib/api"
 import { useAuth } from "@/context/auth"
+import { Skeleton } from "@/components/ui/skeleton"
 
 function RoleBadge({ role }: { role: string }) {
   return role === "admin"
@@ -121,7 +122,26 @@ export function AdminUsers() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={7} className="text-center py-12 text-muted-foreground text-sm">Loading…</td></tr>
+                  Array.from({ length: 6 }).map((_, i) => (
+                    <tr key={i} className="border-b border-border/50">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+                          <div className="flex flex-col gap-1.5">
+                            <Skeleton className="h-4 w-24" />
+                            <Skeleton className="h-3 w-32" />
+                          </div>
+                        </div>
+                      </td>
+                      {Array.from({ length: 4 }).map((__, j) => (
+                        <td key={j} className="px-4 py-3">
+                          <Skeleton className="h-4 w-16" />
+                        </td>
+                      ))}
+                      <td className="px-4 py-3"><Skeleton className="h-4 w-20" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-7 w-20 rounded-lg" /></td>
+                    </tr>
+                  ))
                 ) : filtered.length === 0 ? (
                   <tr><td colSpan={7} className="text-center py-12 text-muted-foreground text-sm">No users found</td></tr>
                 ) : filtered.map((u) => {

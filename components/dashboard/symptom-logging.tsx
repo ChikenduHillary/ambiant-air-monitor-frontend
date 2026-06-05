@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { symptoms as symptomsApi, type SymptomLog } from "@/lib/api"
+import { Skeleton } from "@/components/ui/skeleton"
 
 const SYMPTOMS = [
   { id: "Wheeze",               label: "Wheeze",              icon: Wind },
@@ -205,7 +206,18 @@ export function SymptomLogging() {
           </CardHeader>
           <CardContent className="px-5 pb-5 flex flex-col gap-3">
             {logsLoading ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Loading…</p>
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex flex-col gap-2 p-3 rounded-xl bg-muted/50 border border-border">
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-4 w-16 rounded-full" />
+                  </div>
+                  <div className="flex gap-1">
+                    <Skeleton className="h-5 w-14 rounded-full" />
+                    <Skeleton className="h-5 w-20 rounded-full" />
+                  </div>
+                </div>
+              ))
             ) : logs.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">No logs yet — use the form to add your first entry.</p>
             ) : (
