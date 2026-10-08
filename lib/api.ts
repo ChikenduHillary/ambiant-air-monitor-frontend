@@ -110,6 +110,23 @@ export const sensors = {
   daily: (days: number) => request<DailyAggregate[]>(`/sensors/daily?days=${days}`),
 }
 
+// Authenticated by a device's own key (X-Device-Key) instead of a user's
+// login — for the no-account device viewer page, e.g. a team testing one
+// shared physical unit without everyone needing an account on it.
+async function deviceRequest<T>(path: string, deviceKey: string): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, { headers: { "X-Device-Key": deviceKey } })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new ApiError(res.status, (body as { error?: string }).error ?? `HTTP ${res.status}`)
+  }
+  return res.json() as Promise<T>
+}
+
+export const deviceView = {
+  current: (deviceKey: string) => deviceRequest<SensorReading>("/devices/readings/current", deviceKey),
+  hourly: (deviceKey: string) => deviceRequest<SensorReading[]>("/devices/readings/hourly", deviceKey),
+}
+
 // ── alerts ───────────────────────────────────────────────────────────────────
 
 export interface Alert {
