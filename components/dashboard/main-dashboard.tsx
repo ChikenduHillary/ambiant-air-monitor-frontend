@@ -25,7 +25,9 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { toast } from "sonner"
 import { sensors, alerts as alertsApi, ApiError, type SensorReading, type Alert } from "@/lib/api"
+import { isNewReading } from "@/lib/reading-notifier"
 
 function getAqiCategory(aqi: number) {
   if (aqi <= 50) return { label: "Good", color: "#34d399" }
@@ -148,6 +150,11 @@ export function MainDashboard() {
         setPrevReading((p) => p ?? cur)
         setReading((prev) => { setPrevReading(prev); return cur })
         setLoadingErr("")
+        if (isNewReading(cur.id)) {
+          toast.success(`New reading received — AQI ${cur.aqi}`, {
+            description: `PM2.5 ${cur.pm25.toFixed(1)} µg/m³ · VOC ${cur.voc} ppm`,
+          })
+        }
       } catch (e) {
         if (cancelled) return
         // No readings yet (e.g. a fresh device, or data just cleared) isn't
