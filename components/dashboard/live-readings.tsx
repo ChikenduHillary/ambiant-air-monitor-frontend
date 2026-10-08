@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts"
-import { Wind, FlaskConical, Thermometer, Droplets, Wifi, TrendingUp, TrendingDown, RefreshCw, Satellite } from "lucide-react"
+import { Wind, FlaskConical, Thermometer, Droplets, Wifi, TrendingUp, TrendingDown, RefreshCw } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { sensors, ApiError, type SensorReading } from "@/lib/api"
@@ -55,10 +55,11 @@ interface BigReading {
   safe: string
 }
 
-function buildBigReadings(cur: SensorReading, prev: SensorReading): BigReading[] {
+function buildBigReadings(cur: SensorReading, prev: SensorReading, hasData: boolean): BigReading[] {
   const pm25Trend = cur.pm25 > prev.pm25 + 0.5 ? "up" : cur.pm25 < prev.pm25 - 0.5 ? "down" : "stable"
   const tempTrend = cur.temperature > prev.temperature + 0.1 ? "up" : cur.temperature < prev.temperature - 0.1 ? "down" : "stable"
   const humTrend = cur.humidity > prev.humidity + 0.5 ? "up" : cur.humidity < prev.humidity - 0.5 ? "down" : "stable"
+  const noDataBadge = "bg-muted text-muted-foreground border-border"
 
   return [
     {
@@ -70,12 +71,14 @@ function buildBigReadings(cur: SensorReading, prev: SensorReading): BigReading[]
       icon: Wind,
       color: "#f97316",
       bg: "bg-orange-500/10",
-      status: cur.pm25 > 35 ? "High" : cur.pm25 > 20 ? "Moderate" : "Good",
-      statusColor: cur.pm25 > 35
-        ? "bg-red-500/15 text-red-600 border-red-500/30"
-        : cur.pm25 > 20
-          ? "bg-amber-500/15 text-amber-600 border-amber-500/30"
-          : "bg-emerald-500/15 text-emerald-600 border-emerald-500/30",
+      status: !hasData ? "No data" : cur.pm25 > 35 ? "High" : cur.pm25 > 20 ? "Moderate" : "Good",
+      statusColor: !hasData
+        ? noDataBadge
+        : cur.pm25 > 35
+          ? "bg-red-500/15 text-red-600 border-red-500/30"
+          : cur.pm25 > 20
+            ? "bg-amber-500/15 text-amber-600 border-amber-500/30"
+            : "bg-emerald-500/15 text-emerald-600 border-emerald-500/30",
       safe: "< 35",
     },
     {
@@ -87,12 +90,14 @@ function buildBigReadings(cur: SensorReading, prev: SensorReading): BigReading[]
       icon: FlaskConical,
       color: "oklch(0.55 0.16 196)",
       bg: "bg-primary/10",
-      status: cur.voc > 1000 ? "High" : cur.voc > 600 ? "Moderate" : "Good",
-      statusColor: cur.voc > 1000
-        ? "bg-red-500/15 text-red-600 border-red-500/30"
-        : cur.voc > 600
-          ? "bg-amber-500/15 text-amber-600 border-amber-500/30"
-          : "bg-emerald-500/15 text-emerald-600 border-emerald-500/30",
+      status: !hasData ? "No data" : cur.voc > 1000 ? "High" : cur.voc > 600 ? "Moderate" : "Good",
+      statusColor: !hasData
+        ? noDataBadge
+        : cur.voc > 1000
+          ? "bg-red-500/15 text-red-600 border-red-500/30"
+          : cur.voc > 600
+            ? "bg-amber-500/15 text-amber-600 border-amber-500/30"
+            : "bg-emerald-500/15 text-emerald-600 border-emerald-500/30",
       safe: "< 1000",
     },
     {
@@ -104,8 +109,8 @@ function buildBigReadings(cur: SensorReading, prev: SensorReading): BigReading[]
       icon: Thermometer,
       color: "#22c55e",
       bg: "bg-emerald-500/10",
-      status: cur.temperature > 28 || cur.temperature < 16 ? "Caution" : "Optimal",
-      statusColor: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30",
+      status: !hasData ? "No data" : cur.temperature > 28 || cur.temperature < 16 ? "Caution" : "Optimal",
+      statusColor: !hasData ? noDataBadge : "bg-emerald-500/15 text-emerald-600 border-emerald-500/30",
       safe: "18–26",
     },
     {
@@ -117,8 +122,8 @@ function buildBigReadings(cur: SensorReading, prev: SensorReading): BigReading[]
       icon: Droplets,
       color: "#3b82f6",
       bg: "bg-blue-500/10",
-      status: cur.humidity > 65 || cur.humidity < 30 ? "Caution" : "Good",
-      statusColor: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30",
+      status: !hasData ? "No data" : cur.humidity > 65 || cur.humidity < 30 ? "Caution" : "Good",
+      statusColor: !hasData ? noDataBadge : "bg-emerald-500/15 text-emerald-600 border-emerald-500/30",
       safe: "40–65",
     },
   ]
@@ -178,29 +183,19 @@ export function LiveReadings() {
     aqi: r.aqi,
   }))
 
-  const bigReadings = current && prev ? buildBigReadings(current, prev) : []
+  const isLoading = !checkedOnce
+  const hasData = !!current
+  const displayCurrent: SensorReading = current ?? {
+    id: 0, timestamp: "", pm25: 0, voc: 0, temperature: 0, humidity: 0, aqi: 0,
+  }
+  const displayPrev = prev ?? displayCurrent
+  const bigReadings = buildBigReadings(displayCurrent, displayPrev, hasData)
 
   if (error) {
     return (
       <div className="flex items-center justify-center h-64 text-muted-foreground text-sm gap-2">
         <RefreshCw className="h-4 w-4" />
         {error}
-      </div>
-    )
-  }
-
-  if (checkedOnce && !current) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
-        <div className="h-12 w-12 rounded-2xl bg-muted flex items-center justify-center">
-          <Satellite className="h-6 w-6 text-muted-foreground" />
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-foreground">No readings yet</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Waiting for your AeroGuard device to report in — this page updates automatically.
-          </p>
-        </div>
       </div>
     )
   }
@@ -215,15 +210,17 @@ export function LiveReadings() {
           <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Live · Updating every 30s</span>
         </div>
         <span className="text-xs text-muted-foreground">
-          {lastUpdated
-            ? `Updated at ${lastUpdated.toLocaleTimeString()}`
-            : "Waiting for data…"}
+          {isLoading
+            ? "Waiting for data…"
+            : lastUpdated
+              ? `Updated at ${lastUpdated.toLocaleTimeString()}`
+              : "No data yet"}
         </span>
       </div>
 
       {/* Big reading cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {bigReadings.length === 0
+        {isLoading
           ? Array.from({ length: 4 }).map((_, i) => (
               <Card key={i} className="border shadow-sm">
                 <CardContent className="p-5 h-36 flex items-center justify-center text-muted-foreground text-sm">
