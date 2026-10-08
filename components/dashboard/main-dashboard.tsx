@@ -21,7 +21,6 @@ import {
   Clock,
   TrendingUp,
   RefreshCw,
-  Satellite,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -173,8 +172,14 @@ export function MainDashboard() {
   }, [])
 
   const isDark = mounted && resolvedTheme === "dark"
-  const aqiValue = reading?.aqi ?? 0
-  const aqiCategory = getAqiCategory(aqiValue)
+  const isLoading = !checkedOnce
+  const hasData = !!reading
+  const displayReading: SensorReading = reading ?? {
+    id: 0, timestamp: "", pm25: 0, voc: 0, temperature: 0, humidity: 0, aqi: 0,
+  }
+  const displayPrev = prevReading ?? displayReading
+  const aqiValue = displayReading.aqi
+  const aqiCategory = hasData ? getAqiCategory(aqiValue) : { label: "No data", color: "#9ca3af" }
   const gaugeData = [{ value: (aqiValue / 300) * 100, fill: aqiCategory.color }]
   const triggerThreshold = 75
   const exceeded = aqiValue > triggerThreshold
@@ -186,36 +191,18 @@ export function MainDashboard() {
     updated: isDark ? "#86efac" : "#059669",
   }
 
-  const sensorDefs = reading && prevReading
-    ? [
-        { label: "PM2.5",       value: reading.pm25,        unit: "µg/m³", delta: reading.pm25 - prevReading.pm25,        Icon: Wind,         threshold: 35 },
-        { label: "VOC / CO₂",   value: reading.voc,         unit: "ppm",   delta: reading.voc - prevReading.voc,          Icon: FlaskConical, threshold: 1000 },
-        { label: "Temperature", value: reading.temperature, unit: "°C",    delta: reading.temperature - prevReading.temperature, Icon: Thermometer,  threshold: 30 },
-        { label: "Humidity",    value: reading.humidity,    unit: "%",     delta: reading.humidity - prevReading.humidity, Icon: Droplets,     threshold: 80 },
-      ]
-    : []
+  const sensorDefs = [
+    { label: "PM2.5",       value: displayReading.pm25,        unit: "µg/m³", delta: displayReading.pm25 - displayPrev.pm25,        Icon: Wind,         threshold: 35 },
+    { label: "VOC / CO₂",   value: displayReading.voc,         unit: "ppm",   delta: displayReading.voc - displayPrev.voc,          Icon: FlaskConical, threshold: 1000 },
+    { label: "Temperature", value: displayReading.temperature, unit: "°C",    delta: displayReading.temperature - displayPrev.temperature, Icon: Thermometer,  threshold: 30 },
+    { label: "Humidity",    value: displayReading.humidity,    unit: "%",     delta: displayReading.humidity - displayPrev.humidity, Icon: Droplets,     threshold: 80 },
+  ]
 
   if (loadingErr) {
     return (
       <div className="flex items-center justify-center h-64 text-muted-foreground text-sm gap-2">
         <RefreshCw className="h-4 w-4" />
         {loadingErr}
-      </div>
-    )
-  }
-
-  if (checkedOnce && !reading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
-        <div className="h-12 w-12 rounded-2xl bg-muted flex items-center justify-center">
-          <Satellite className="h-6 w-6 text-muted-foreground" />
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-foreground">No readings yet</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Waiting for your AeroGuard device to report in — this page updates automatically.
-          </p>
-        </div>
       </div>
     )
   }
@@ -249,7 +236,7 @@ export function MainDashboard() {
                 </div>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-5xl font-bold tabular-nums leading-none" style={{ color: aqiCategory.color }}>
-                    {reading ? aqiValue : "—"}
+                    {isLoading ? "—" : aqiValue}
                   </span>
                   <span className="text-xs text-muted-foreground dark:text-white/50 mt-1 uppercase tracking-widest font-medium">AQI</span>
                 </div>
@@ -264,29 +251,31 @@ export function MainDashboard() {
                       Air Quality Index
                     </span>
                   </div>
-                  {reading
-                    ? <h2 className="text-3xl font-bold" style={{ color: aqiCategory.color }}>{aqiCategory.label}</h2>
-                    : <Skeleton className="h-9 w-32 mt-1" />
+                  {isLoading
+                    ? <Skeleton className="h-9 w-32 mt-1" />
+                    : <h2 className="text-3xl font-bold" style={{ color: aqiCategory.color }}>{aqiCategory.label}</h2>
                   }
                   <p className="text-sm text-muted-foreground dark:text-white/60 mt-1">
-                    {exceeded
-                      ? "Conditions elevated. Limit prolonged exertion outdoors."
-                      : "Air quality within acceptable range. Stay aware."}
+                    {!hasData
+                      ? "No sensor data yet. This updates automatically once your device reports in."
+                      : exceeded
+                        ? "Conditions elevated. Limit prolonged exertion outdoors."
+                        : "Air quality within acceptable range. Stay aware."}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { label: "Personal Risk",  value: exceeded ? "Elevated" : "Normal",    color: statColors.risk },
-                    { label: "Forecast",        value: "Improving",                         color: statColors.forecast },
-                    { label: "Peak Today",      value: reading ? `AQI ${aqiValue}` : null,  color: statColors.peak },
-                    { label: "Last Updated",    value: reading ? "Just now" : null,          color: statColors.updated },
+                    { label: "Personal Risk",  value: hasData ? (exceeded ? "Elevated" : "Normal") : "No data", color: hasData ? statColors.risk : "#9ca3af" },
+                    { label: "Forecast",        value: hasData ? "Improving" : "No data",                        color: hasData ? statColors.forecast : "#9ca3af" },
+                    { label: "Peak Today",      value: `AQI ${aqiValue}`,                                        color: statColors.peak },
+                    { label: "Last Updated",    value: hasData ? "Just now" : "No data yet",                     color: hasData ? statColors.updated : "#9ca3af" },
                   ].map((item) => (
                     <div key={item.label} className="bg-black/4 dark:bg-white/5 rounded-xl p-3">
                       <p className="text-xs text-muted-foreground dark:text-white/50 uppercase tracking-wider">{item.label}</p>
-                      {item.value !== null
-                        ? <p className="text-sm font-semibold mt-0.5" style={{ color: item.color }}>{item.value}</p>
-                        : <Skeleton className="h-4 w-16 mt-1" />
+                      {isLoading
+                        ? <Skeleton className="h-4 w-16 mt-1" />
+                        : <p className="text-sm font-semibold mt-0.5" style={{ color: item.color }}>{item.value}</p>
                       }
                     </div>
                   ))}
@@ -298,7 +287,7 @@ export function MainDashboard() {
 
         {/* Sensor Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {sensorDefs.length > 0
+          {!isLoading
             ? sensorDefs.map((s) => <SensorCard key={s.label} {...s} />)
             : Array.from({ length: 4 }).map((_, i) => (
                 <Card key={i} className="border shadow-sm">
@@ -330,7 +319,7 @@ export function MainDashboard() {
                 <div>
                   <p className="text-sm font-semibold text-foreground">Personalized Trigger Threshold</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Set at AQI {triggerThreshold} · Current: {reading?.aqi ?? "—"}
+                    Set at AQI {triggerThreshold} · Current: {aqiValue}
                     {exceeded ? " — Threshold exceeded" : " — Within safe range"}
                   </p>
                 </div>
@@ -375,7 +364,7 @@ export function MainDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="px-5 pb-5 flex flex-col gap-3">
-            {!reading
+            {isLoading
               ? Array.from({ length: 3 }).map((_, i) => (
                   <div key={i} className="flex gap-3 border-l-2 border-muted pl-3 py-2.5 rounded-r-lg bg-muted/30">
                     <Skeleton className="h-4 w-4 rounded-full shrink-0 mt-0.5" />
@@ -397,13 +386,13 @@ export function MainDashboard() {
             <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Sensor Snapshot</CardTitle>
           </CardHeader>
           <CardContent className="px-5 pb-4 flex flex-col gap-3">
-            {reading
+            {!isLoading
               ? [
-                  { label: "PM2.5",       value: `${reading.pm25.toFixed(1)} µg/m³` },
-                  { label: "VOC / CO₂",   value: `${reading.voc} ppm` },
-                  { label: "Temperature", value: `${reading.temperature.toFixed(1)}°C` },
-                  { label: "Humidity",    value: `${reading.humidity}%` },
-                  { label: "AQI",         value: `${reading.aqi}` },
+                  { label: "PM2.5",       value: `${displayReading.pm25.toFixed(1)} µg/m³` },
+                  { label: "VOC / CO₂",   value: `${displayReading.voc} ppm` },
+                  { label: "Temperature", value: `${displayReading.temperature.toFixed(1)}°C` },
+                  { label: "Humidity",    value: `${displayReading.humidity}%` },
+                  { label: "AQI",         value: `${displayReading.aqi}` },
                 ].map((stat) => (
                   <div key={stat.label} className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">{stat.label}</span>
