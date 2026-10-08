@@ -150,7 +150,7 @@ export function DeviceSettings() {
               <DialogHeader>
                 <DialogTitle>Add a device</DialogTitle>
                 <DialogDescription>
-                  Give it a name you'll recognize, then paste the generated key into that device's secrets.h.
+                  Give it a name you'll recognize.
                 </DialogDescription>
               </DialogHeader>
               <div className="flex flex-col gap-2 py-2">
