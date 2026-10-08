@@ -109,6 +109,7 @@ export const sensors = {
   current: () => request<SensorReading>("/sensors/current"),
   hourly: () => request<SensorReading[]>("/sensors/hourly"),
   daily: (days: number) => request<DailyAggregate[]>(`/sensors/daily?days=${days}`),
+  todayPeak: () => request<{ peak_aqi: number }>("/sensors/today-peak"),
 }
 
 // Authenticated by a device's own key (X-Device-Key) instead of a user's
@@ -127,6 +128,7 @@ export const deviceView = {
   current: (deviceKey: string) => deviceRequest<SensorReading>("/devices/readings/current", deviceKey),
   hourly: (deviceKey: string) => deviceRequest<SensorReading[]>("/devices/readings/hourly", deviceKey),
   daily: (deviceKey: string, days: number) => deviceRequest<DailyAggregate[]>(`/devices/readings/daily?days=${days}`, deviceKey),
+  todayPeak: (deviceKey: string) => deviceRequest<{ peak_aqi: number }>("/devices/readings/today-peak", deviceKey),
 }
 
 // ── alerts ───────────────────────────────────────────────────────────────────

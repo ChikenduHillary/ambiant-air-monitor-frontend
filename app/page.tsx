@@ -31,6 +31,9 @@ import { AdminSensors } from "@/components/admin/admin-sensors"
 import { DeviceSettings } from "@/components/dashboard/device-settings"
 import { ViewingDeviceCard } from "@/components/dashboard/viewing-device-card"
 import { useAuth } from "@/context/auth"
+import { sensors, deviceView, ApiError } from "@/lib/api"
+import { getViewingDeviceKey } from "@/lib/viewing-device"
+import { getAqiCategory } from "@/lib/aqi"
 
 type Section = "dashboard" | "live" | "history" | "symptoms" | "alerts" | "settings"
              | "admin-overview" | "admin-users" | "admin-alerts" | "admin-sensors"
@@ -97,11 +100,41 @@ export default function Page() {
   const { user, logout } = useAuth()
   const [section, setSection] = useState<Section>("dashboard")
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [headerAqi, setHeaderAqi] = useState<number | null>(null)
 
   function navigate(id: Section) {
     setSection(id)
     setMobileOpen(false)
   }
+
+  useEffect(() => {
+    let cancelled = false
+    let viewingKey = getViewingDeviceKey()
+
+    async function load() {
+      try {
+        const cur = viewingKey ? await deviceView.current(viewingKey) : await sensors.current()
+        if (!cancelled) setHeaderAqi(cur.aqi)
+      } catch (e) {
+        if (!cancelled && !(e instanceof ApiError && e.status === 404)) {
+          setHeaderAqi(null)
+        }
+      }
+    }
+    load()
+    const id = setInterval(load, 30_000)
+
+    const onChange = () => { viewingKey = getViewingDeviceKey(); load() }
+    window.addEventListener("viewing-device-change", onChange)
+
+    return () => {
+      cancelled = true
+      clearInterval(id)
+      window.removeEventListener("viewing-device-change", onChange)
+    }
+  }, [])
+
+  const headerCategory = headerAqi !== null ? getAqiCategory(headerAqi) : null
 
   const { title, subtitle } = sectionTitles[section]
 
@@ -271,10 +304,18 @@ export default function Page() {
 
           <div className="flex items-center gap-2 sm:gap-2">
             {/* AQI chip */}
-            <div className="hidden sm:flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-full px-3 py-1.5">
-              <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-              <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">AQI 87 · Moderate</span>
-            </div>
+            {headerCategory && (
+              <div
+                key={headerAqi}
+                className="hidden sm:flex items-center gap-2 rounded-full px-3 py-1.5 border animate-in fade-in slide-in-from-top-1 duration-300"
+                style={{ backgroundColor: `${headerCategory.color}1A`, borderColor: `${headerCategory.color}4D` }}
+              >
+                <span className="h-2 w-2 rounded-full animate-pulse" style={{ backgroundColor: headerCategory.color }} />
+                <span className="text-xs font-semibold" style={{ color: headerCategory.color }}>
+                  AQI {headerAqi} · {headerCategory.label}
+                </span>
+              </div>
+            )}
 
             {/* Theme toggle */}
             <ThemeToggle />

@@ -30,14 +30,7 @@ import { toast } from "sonner"
 import { sensors, alerts as alertsApi, deviceView, ApiError, type SensorReading, type Alert } from "@/lib/api"
 import { isNewReading } from "@/lib/reading-notifier"
 import { getViewingDeviceKey } from "@/lib/viewing-device"
-
-function getAqiCategory(aqi: number) {
-  if (aqi <= 50) return { label: "Good", color: "#34d399" }
-  if (aqi <= 100) return { label: "Moderate", color: "#f59e0b" }
-  if (aqi <= 150) return { label: "Unhealthy for Sensitive", color: "#f97316" }
-  if (aqi <= 200) return { label: "Unhealthy", color: "#ef4444" }
-  return { label: "Hazardous", color: "#9b1c1c" }
-}
+import { getAqiCategory } from "@/lib/aqi"
 
 function TrendIcon({ value }: { value: number }) {
   if (value > 0) return <ArrowUp className="h-3.5 w-3.5 text-orange-500" />
@@ -142,6 +135,7 @@ export function MainDashboard() {
   const [prevReading, setPrevReading] = useState<SensorReading | null>(null)
   const [loadingErr, setLoadingErr] = useState("")
   const [checkedOnce, setCheckedOnce] = useState(false)
+  const [peakToday, setPeakToday] = useState<number | null>(null)
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -189,6 +183,13 @@ export function MainDashboard() {
         } catch {
           // Alerts failing independently shouldn't block the rest of the dashboard.
         }
+      }
+
+      try {
+        const { peak_aqi } = viewingKey ? await deviceView.todayPeak(viewingKey) : await sensors.todayPeak()
+        if (!cancelled) setPeakToday(peak_aqi)
+      } catch {
+        // Not critical enough to block the rest of the dashboard.
       }
 
       if (!cancelled) setCheckedOnce(true)
@@ -306,7 +307,7 @@ export function MainDashboard() {
                   {[
                     { label: "Personal Risk",  value: hasData ? (exceeded ? "Elevated" : "Normal") : "No data", color: hasData ? statColors.risk : "#9ca3af" },
                     { label: "Forecast",        value: hasData ? "Improving" : "No data",                        color: hasData ? statColors.forecast : "#9ca3af" },
-                    { label: "Peak Today",      value: `AQI ${aqiValue}`,                                        color: statColors.peak },
+                    { label: "Peak Today",      value: `AQI ${peakToday ?? aqiValue}`,                           color: statColors.peak },
                     { label: "Last Updated",    value: hasData ? "Just now" : "No data yet",                     color: hasData ? statColors.updated : "#9ca3af" },
                   ].map((item) => (
                     <div key={item.label} className="bg-black/4 dark:bg-white/5 rounded-xl p-3">
