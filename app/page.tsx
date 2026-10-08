@@ -29,6 +29,7 @@ import { AdminUsers } from "@/components/admin/admin-users"
 import { AdminAlerts } from "@/components/admin/admin-alerts"
 import { AdminSensors } from "@/components/admin/admin-sensors"
 import { DeviceSettings } from "@/components/dashboard/device-settings"
+import { ViewingDeviceCard } from "@/components/dashboard/viewing-device-card"
 import { useAuth } from "@/context/auth"
 
 type Section = "dashboard" | "live" | "history" | "symptoms" | "alerts" | "settings"
@@ -295,7 +296,12 @@ export default function Page() {
           {section === "history"       && <HistoryTrends />}
           {section === "symptoms"      && <SymptomLogging />}
           {section === "alerts"        && <AlertsPlaceholder />}
-          {section === "settings"      && <DeviceSettings />}
+          {section === "settings"      && (
+            <div className="flex flex-col gap-6">
+              <ViewingDeviceCard />
+              <DeviceSettings />
+            </div>
+          )}
           {section === "admin-overview" && <AdminOverview />}
           {section === "admin-users"    && <AdminUsers />}
           {section === "admin-alerts"   && <AdminAlerts />}

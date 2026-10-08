@@ -21,13 +21,15 @@ import {
   Clock,
   TrendingUp,
   RefreshCw,
+  Radio,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
-import { sensors, alerts as alertsApi, ApiError, type SensorReading, type Alert } from "@/lib/api"
+import { sensors, alerts as alertsApi, deviceView, ApiError, type SensorReading, type Alert } from "@/lib/api"
 import { isNewReading } from "@/lib/reading-notifier"
+import { getViewingDeviceKey } from "@/lib/viewing-device"
 
 function getAqiCategory(aqi: number) {
   if (aqi <= 50) return { label: "Good", color: "#34d399" }
@@ -118,11 +120,13 @@ function SensorCard({
         </div>
         <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{label}</p>
         <div className="flex items-baseline gap-1 mt-1">
-          <span className="text-2xl font-bold tabular-nums text-foreground">{value.toFixed(1)}</span>
+          <span key={value} className="text-2xl font-bold tabular-nums text-foreground animate-in fade-in slide-in-from-bottom-1 duration-300">
+            {value.toFixed(1)}
+          </span>
           <span className="text-xs text-muted-foreground">{unit}</span>
         </div>
         <div className="mt-3 h-1 bg-muted rounded-full overflow-hidden">
-          <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: barColor }} />
+          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: barColor }} />
         </div>
         <p className="text-[10px] text-muted-foreground mt-1">{Math.round(pct)}% of threshold</p>
       </CardContent>
@@ -141,11 +145,25 @@ export function MainDashboard() {
 
   useEffect(() => { setMounted(true) }, [])
 
+  const [viewingKey, setViewingKey] = useState<string | null>(null)
+
+  useEffect(() => {
+    setViewingKey(getViewingDeviceKey())
+    const onChange = () => {
+      setViewingKey(getViewingDeviceKey())
+      setCheckedOnce(false)
+      setReading(null)
+      setPrevReading(null)
+    }
+    window.addEventListener("viewing-device-change", onChange)
+    return () => window.removeEventListener("viewing-device-change", onChange)
+  }, [])
+
   useEffect(() => {
     let cancelled = false
     async function load() {
       try {
-        const cur = await sensors.current()
+        const cur = viewingKey ? await deviceView.current(viewingKey) : await sensors.current()
         if (cancelled) return
         setPrevReading((p) => p ?? cur)
         setReading((prev) => { setPrevReading(prev); return cur })
@@ -164,11 +182,13 @@ export function MainDashboard() {
         }
       }
 
-      try {
-        const als = await alertsApi.list(6)
-        if (!cancelled) setAlertList(als)
-      } catch {
-        // Alerts failing independently shouldn't block the rest of the dashboard.
+      if (!viewingKey) {
+        try {
+          const als = await alertsApi.list(6)
+          if (!cancelled) setAlertList(als)
+        } catch {
+          // Alerts failing independently shouldn't block the rest of the dashboard.
+        }
       }
 
       if (!cancelled) setCheckedOnce(true)
@@ -176,7 +196,7 @@ export function MainDashboard() {
     load()
     const id = setInterval(load, 30_000)
     return () => { cancelled = true; clearInterval(id) }
-  }, [])
+  }, [viewingKey])
 
   const isDark = mounted && resolvedTheme === "dark"
   const isLoading = !checkedOnce
@@ -215,7 +235,14 @@ export function MainDashboard() {
   }
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
+    <div className="flex flex-col gap-6">
+      {viewingKey && (
+        <div className="flex items-center gap-2 bg-primary/10 border border-primary/30 rounded-xl px-4 py-2.5 text-sm text-primary font-medium animate-in fade-in slide-in-from-top-2 duration-300">
+          <Radio className="h-4 w-4 animate-pulse" />
+          Viewing a shared device — not your own readings
+        </div>
+      )}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
       {/* Left column */}
       <div className="flex flex-col gap-6">
         {/* AQI Hero Card */}
@@ -242,7 +269,11 @@ export function MainDashboard() {
                   </ResponsiveContainer>
                 </div>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-5xl font-bold tabular-nums leading-none" style={{ color: aqiCategory.color }}>
+                  <span
+                    key={isLoading ? "loading" : aqiValue}
+                    className="text-5xl font-bold tabular-nums leading-none animate-in fade-in zoom-in-95 duration-300"
+                    style={{ color: aqiCategory.color }}
+                  >
                     {isLoading ? "—" : aqiValue}
                   </span>
                   <span className="text-xs text-muted-foreground dark:text-white/50 mt-1 uppercase tracking-widest font-medium">AQI</span>
@@ -260,7 +291,7 @@ export function MainDashboard() {
                   </div>
                   {isLoading
                     ? <Skeleton className="h-9 w-32 mt-1" />
-                    : <h2 className="text-3xl font-bold" style={{ color: aqiCategory.color }}>{aqiCategory.label}</h2>
+                    : <h2 key={aqiCategory.label} className="text-3xl font-bold animate-in fade-in slide-in-from-left-2 duration-300" style={{ color: aqiCategory.color }}>{aqiCategory.label}</h2>
                   }
                   <p className="text-sm text-muted-foreground dark:text-white/60 mt-1">
                     {!hasData
@@ -415,6 +446,7 @@ export function MainDashboard() {
             }
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   )

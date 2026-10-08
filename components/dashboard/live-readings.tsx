@@ -11,12 +11,13 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts"
-import { Wind, FlaskConical, Thermometer, Droplets, Wifi, TrendingUp, TrendingDown, RefreshCw } from "lucide-react"
+import { Wind, FlaskConical, Thermometer, Droplets, Wifi, TrendingUp, TrendingDown, RefreshCw, Radio } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
-import { sensors, ApiError, type SensorReading } from "@/lib/api"
+import { sensors, deviceView, ApiError, type SensorReading } from "@/lib/api"
 import { isNewReading } from "@/lib/reading-notifier"
+import { getViewingDeviceKey } from "@/lib/viewing-device"
 
 function formatTime(iso: string) {
   const d = new Date(iso)
@@ -144,12 +145,26 @@ export function LiveReadings() {
   const [error, setError] = useState("")
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [checkedOnce, setCheckedOnce] = useState(false)
+  const [viewingKey, setViewingKey] = useState<string | null>(null)
+
+  useEffect(() => {
+    setViewingKey(getViewingDeviceKey())
+    const onChange = () => {
+      setViewingKey(getViewingDeviceKey())
+      setCheckedOnce(false)
+      setCurrent(null)
+      setPrev(null)
+      setHistory([])
+    }
+    window.addEventListener("viewing-device-change", onChange)
+    return () => window.removeEventListener("viewing-device-change", onChange)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
     async function load() {
       try {
-        const hourly = await sensors.hourly()
+        const hourly = viewingKey ? await deviceView.hourly(viewingKey) : await sensors.hourly()
         if (cancelled) return
         setHistory(hourly)
         setError("")
@@ -159,7 +174,7 @@ export function LiveReadings() {
       }
 
       try {
-        const cur = await sensors.current()
+        const cur = viewingKey ? await deviceView.current(viewingKey) : await sensors.current()
         if (cancelled) return
         setPrev(current)
         setCurrent(cur)
@@ -181,7 +196,7 @@ export function LiveReadings() {
     load()
     const id = setInterval(load, 30_000)
     return () => { cancelled = true; clearInterval(id) }
-  }, [])
+  }, [viewingKey])
 
   const chartData = history.map((r) => ({
     time: formatTime(r.timestamp),
@@ -209,6 +224,12 @@ export function LiveReadings() {
 
   return (
     <div className="flex flex-col gap-6">
+      {viewingKey && (
+        <div className="flex items-center gap-2 bg-primary/10 border border-primary/30 rounded-xl px-4 py-2.5 text-sm text-primary font-medium animate-in fade-in slide-in-from-top-2 duration-300">
+          <Radio className="h-4 w-4 animate-pulse" />
+          Viewing a shared device — not your own readings
+        </div>
+      )}
       {/* Live badge */}
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-3 py-1.5">
@@ -250,7 +271,7 @@ export function LiveReadings() {
                     </div>
                     <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{r.label}</p>
                     <div className="flex items-baseline gap-1.5 mt-1">
-                      <span className="text-3xl font-bold tabular-nums" style={{ color: r.color }}>{r.value}</span>
+                      <span key={r.value} className="text-3xl font-bold tabular-nums animate-in fade-in slide-in-from-bottom-1 duration-300" style={{ color: r.color }}>{r.value}</span>
                       <span className="text-sm text-muted-foreground">{r.unit}</span>
                     </div>
                     <div className="flex items-center justify-between mt-3">
