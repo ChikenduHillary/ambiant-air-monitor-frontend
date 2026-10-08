@@ -7,16 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { alerts as alertsApi, type Alert } from "@/lib/api"
-
-function elapsed(iso: string) {
-  const ms = Date.now() - new Date(iso).getTime()
-  const m = Math.floor(ms / 60000)
-  if (m < 1) return "Just now"
-  if (m < 60) return `${m} min ago`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h} hr ago`
-  return `${Math.floor(h / 24)} d ago`
-}
+import { formatElapsed as elapsed } from "@/lib/time"
 
 const LEVEL_STYLES = {
   warning: { border: "border-l-orange-500", bg: "bg-orange-500/5", icon: <AlertTriangle className="h-4 w-4 text-orange-500 shrink-0 mt-0.5" /> },

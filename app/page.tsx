@@ -31,12 +31,13 @@ import { AdminSensors } from "@/components/admin/admin-sensors"
 import { DeviceSettings } from "@/components/dashboard/device-settings"
 import { ViewingDeviceCard } from "@/components/dashboard/viewing-device-card"
 import { AlertsPage } from "@/components/dashboard/alerts-page"
+import { ProfilePage } from "@/components/dashboard/profile-page"
 import { useAuth } from "@/context/auth"
 import { sensors, deviceView, alerts as alertsApi, ApiError } from "@/lib/api"
 import { getViewingDeviceKey } from "@/lib/viewing-device"
 import { getAqiCategory } from "@/lib/aqi"
 
-type Section = "dashboard" | "live" | "history" | "symptoms" | "alerts" | "settings"
+type Section = "dashboard" | "live" | "history" | "symptoms" | "alerts" | "profile" | "settings"
              | "admin-overview" | "admin-users" | "admin-alerts" | "admin-sensors"
 
 const navItems = [
@@ -45,6 +46,7 @@ const navItems = [
   { id: "history"   as Section, label: "History",       icon: BarChart2 },
   { id: "symptoms"  as Section, label: "Symptoms",      icon: Heart },
   { id: "alerts"    as Section, label: "Alerts",        icon: Bell },
+  { id: "profile"   as Section, label: "Profile",       icon: User },
   { id: "settings"  as Section, label: "Settings",      icon: Settings },
 ]
 
@@ -61,6 +63,7 @@ const sectionTitles: Record<Section, { title: string; subtitle: string }> = {
   history:        { title: "History & Trends", subtitle: "Analyze air quality and symptom patterns over time" },
   symptoms:       { title: "Symptom Log",      subtitle: "Record and track your respiratory symptoms" },
   alerts:         { title: "Alerts",           subtitle: "Notifications and threshold breach events" },
+  profile:        { title: "Profile",          subtitle: "Your account, patient details, and alert threshold" },
   settings:       { title: "Settings",         subtitle: "Configure your device, thresholds, and preferences" },
   "admin-overview": { title: "Admin — Overview",     subtitle: "System-wide statistics and health" },
   "admin-users":    { title: "Admin — Users",        subtitle: "Manage all registered patients and roles" },
@@ -270,16 +273,21 @@ export default function Page() {
         {/* User */}
         <div className="border-t border-sidebar-border px-4 py-4 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-sidebar-primary/20 flex items-center justify-center shrink-0 overflow-hidden">
-              {user?.avatar_url
-                ? <img src={user.avatar_url} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
-                : <User className="h-4 w-4 text-sidebar-primary" />
-              }
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-sidebar-foreground truncate">{user?.name ?? "—"}</p>
-              <p className="text-[10px] text-sidebar-foreground/50">{user?.condition} · Patient ID {user?.patient_id}</p>
-            </div>
+            <button
+              onClick={() => navigate("profile")}
+              className="flex items-center gap-3 flex-1 min-w-0 text-left rounded-xl -m-1.5 p-1.5 hover:bg-sidebar-accent transition-colors"
+            >
+              <div className="h-8 w-8 rounded-full bg-sidebar-primary/20 flex items-center justify-center shrink-0 overflow-hidden">
+                {user?.avatar_url
+                  ? <img src={user.avatar_url} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                  : <User className="h-4 w-4 text-sidebar-primary" />
+                }
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-sidebar-foreground truncate">{user?.name ?? "—"}</p>
+                <p className="text-[10px] text-sidebar-foreground/50">{user?.condition} · Patient ID {user?.patient_id}</p>
+              </div>
+            </button>
             <button
               onClick={logout}
               title="Sign out"
@@ -349,12 +357,16 @@ export default function Page() {
             </button>
 
             {/* Avatar */}
-            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center cursor-pointer hover:bg-primary/30 transition-colors overflow-hidden">
+            <button
+              onClick={() => navigate("profile")}
+              title="Profile"
+              className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center hover:bg-primary/30 transition-colors overflow-hidden"
+            >
               {user?.avatar_url
                 ? <img src={user.avatar_url} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                 : <User className="h-4 w-4 text-primary-foreground dark:text-primary" />
               }
-            </div>
+            </button>
           </div>
         </header>
 
@@ -365,6 +377,7 @@ export default function Page() {
           {section === "history"       && <HistoryTrends />}
           {section === "symptoms"      && <SymptomLogging />}
           {section === "alerts"        && <AlertsPage />}
+          {section === "profile"       && <ProfilePage />}
           {section === "settings"      && (
             <div className="flex flex-col gap-6">
               <ViewingDeviceCard />

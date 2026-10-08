@@ -31,6 +31,7 @@ import { sensors, alerts as alertsApi, deviceView, ApiError, type SensorReading,
 import { isNewReading } from "@/lib/reading-notifier"
 import { getViewingDeviceKey } from "@/lib/viewing-device"
 import { getAqiCategory } from "@/lib/aqi"
+import { formatElapsed } from "@/lib/time"
 
 function TrendIcon({ value }: { value: number }) {
   if (value > 0) return <ArrowUp className="h-3.5 w-3.5 text-orange-500" />
@@ -57,14 +58,7 @@ function AlertItem({ alert }: { alert: Alert }) {
     },
   }
   const s = styles[alert.level]
-  const elapsed = (() => {
-    const ms = Date.now() - new Date(alert.created_at).getTime()
-    const m = Math.floor(ms / 60000)
-    if (m < 60) return `${m} min ago`
-    const h = Math.floor(m / 60)
-    if (h < 24) return `${h} hr ago`
-    return `${Math.floor(h / 24)} d ago`
-  })()
+  const elapsed = formatElapsed(alert.created_at)
 
   return (
     <div className={`flex gap-3 border-l-2 pl-3 py-2.5 rounded-r-lg ${s.border} ${s.bg}`}>
@@ -308,7 +302,7 @@ export function MainDashboard() {
                     { label: "Personal Risk",  value: hasData ? (exceeded ? "Elevated" : "Normal") : "No data", color: hasData ? statColors.risk : "#9ca3af" },
                     { label: "Forecast",        value: hasData ? "Improving" : "No data",                        color: hasData ? statColors.forecast : "#9ca3af" },
                     { label: "Peak Today",      value: `AQI ${peakToday ?? aqiValue}`,                           color: statColors.peak },
-                    { label: "Last Updated",    value: hasData ? "Just now" : "No data yet",                     color: hasData ? statColors.updated : "#9ca3af" },
+                    { label: "Last Updated",    value: hasData ? formatElapsed(displayReading.timestamp) : "No data yet", color: hasData ? statColors.updated : "#9ca3af" },
                   ].map((item) => (
                     <div key={item.label} className="bg-black/4 dark:bg-white/5 rounded-xl p-3">
                       <p className="text-xs text-muted-foreground dark:text-white/50 uppercase tracking-wider">{item.label}</p>
