@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts"
-import { Wind, FlaskConical, Thermometer, Droplets, Wifi, TrendingUp, TrendingDown, RefreshCw } from "lucide-react"
+import { Wind, FlaskConical, Thermometer, Droplets, Wifi, TrendingUp, TrendingDown, RefreshCw, Satellite } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { sensors, ApiError, type SensorReading } from "@/lib/api"
@@ -136,6 +136,7 @@ export function LiveReadings() {
   const [prev, setPrev] = useState<SensorReading | null>(null)
   const [error, setError] = useState("")
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [checkedOnce, setCheckedOnce] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -162,6 +163,8 @@ export function LiveReadings() {
           setError(e instanceof Error ? e.message : "Failed to load data")
         }
       }
+
+      if (!cancelled) setCheckedOnce(true)
     }
     load()
     const id = setInterval(load, 30_000)
@@ -182,6 +185,22 @@ export function LiveReadings() {
       <div className="flex items-center justify-center h-64 text-muted-foreground text-sm gap-2">
         <RefreshCw className="h-4 w-4" />
         {error}
+      </div>
+    )
+  }
+
+  if (checkedOnce && !current) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+        <div className="h-12 w-12 rounded-2xl bg-muted flex items-center justify-center">
+          <Satellite className="h-6 w-6 text-muted-foreground" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-foreground">No readings yet</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Waiting for your AeroGuard device to report in — this page updates automatically.
+          </p>
+        </div>
       </div>
     )
   }

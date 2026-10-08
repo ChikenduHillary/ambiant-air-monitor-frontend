@@ -21,6 +21,7 @@ import {
   Clock,
   TrendingUp,
   RefreshCw,
+  Satellite,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -135,6 +136,7 @@ export function MainDashboard() {
   const [alertList, setAlertList] = useState<Alert[]>([])
   const [prevReading, setPrevReading] = useState<SensorReading | null>(null)
   const [loadingErr, setLoadingErr] = useState("")
+  const [checkedOnce, setCheckedOnce] = useState(false)
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -162,6 +164,8 @@ export function MainDashboard() {
       } catch {
         // Alerts failing independently shouldn't block the rest of the dashboard.
       }
+
+      if (!cancelled) setCheckedOnce(true)
     }
     load()
     const id = setInterval(load, 30_000)
@@ -196,6 +200,22 @@ export function MainDashboard() {
       <div className="flex items-center justify-center h-64 text-muted-foreground text-sm gap-2">
         <RefreshCw className="h-4 w-4" />
         {loadingErr}
+      </div>
+    )
+  }
+
+  if (checkedOnce && !reading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
+        <div className="h-12 w-12 rounded-2xl bg-muted flex items-center justify-center">
+          <Satellite className="h-6 w-6 text-muted-foreground" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-foreground">No readings yet</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Waiting for your AeroGuard device to report in — this page updates automatically.
+          </p>
+        </div>
       </div>
     )
   }
