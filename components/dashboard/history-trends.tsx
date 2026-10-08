@@ -13,11 +13,12 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts"
-import { Calendar, TrendingDown, TrendingUp, RefreshCw } from "lucide-react"
+import { Calendar, TrendingDown, TrendingUp, RefreshCw, Radio } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { sensors, type DailyAggregate } from "@/lib/api"
+import { sensors, deviceView, type DailyAggregate } from "@/lib/api"
+import { getViewingDeviceKey } from "@/lib/viewing-device"
 
 function getHeatColor(aqi: number) {
   if (aqi <= 50) return "bg-emerald-500"
@@ -76,16 +77,27 @@ export function HistoryTrends() {
   const [data, setData] = useState<DailyAggregate[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [viewingKey, setViewingKey] = useState<string | null>(null)
+
+  useEffect(() => {
+    setViewingKey(getViewingDeviceKey())
+    const onChange = () => setViewingKey(getViewingDeviceKey())
+    window.addEventListener("viewing-device-change", onChange)
+    return () => window.removeEventListener("viewing-device-change", onChange)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     setError("")
-    sensors.daily(ranges[rangeIdx].days)
+    const fetchDaily = viewingKey
+      ? deviceView.daily(viewingKey, ranges[rangeIdx].days)
+      : sensors.daily(ranges[rangeIdx].days)
+    fetchDaily
       .then((d) => { if (!cancelled) { setData(d); setLoading(false) } })
       .catch((e) => { if (!cancelled) { setError(e.message); setLoading(false) } })
     return () => { cancelled = true }
-  }, [rangeIdx])
+  }, [rangeIdx, viewingKey])
 
   const chartData = data.map((d) => ({ ...d, date: shortDate(d.date) }))
   const calendarDays = data.slice(-42)
@@ -105,6 +117,12 @@ export function HistoryTrends() {
 
   return (
     <div className="flex flex-col gap-6">
+      {viewingKey && (
+        <div className="flex items-center gap-2 bg-primary/10 border border-primary/30 rounded-xl px-4 py-2.5 text-sm text-primary font-medium animate-in fade-in slide-in-from-top-2 duration-300">
+          <Radio className="h-4 w-4 animate-pulse" />
+          Viewing a shared device — not your own history
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>

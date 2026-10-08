@@ -30,7 +30,11 @@ import { AdminAlerts } from "@/components/admin/admin-alerts"
 import { AdminSensors } from "@/components/admin/admin-sensors"
 import { DeviceSettings } from "@/components/dashboard/device-settings"
 import { ViewingDeviceCard } from "@/components/dashboard/viewing-device-card"
+import { AlertsPage } from "@/components/dashboard/alerts-page"
 import { useAuth } from "@/context/auth"
+import { sensors, deviceView, alerts as alertsApi, ApiError } from "@/lib/api"
+import { getViewingDeviceKey } from "@/lib/viewing-device"
+import { getAqiCategory } from "@/lib/aqi"
 
 type Section = "dashboard" | "live" | "history" | "symptoms" | "alerts" | "settings"
              | "admin-overview" | "admin-users" | "admin-alerts" | "admin-sensors"
@@ -40,7 +44,7 @@ const navItems = [
   { id: "live"      as Section, label: "Live Readings", icon: Activity },
   { id: "history"   as Section, label: "History",       icon: BarChart2 },
   { id: "symptoms"  as Section, label: "Symptoms",      icon: Heart },
-  { id: "alerts"    as Section, label: "Alerts",        icon: Bell, badge: 2 },
+  { id: "alerts"    as Section, label: "Alerts",        icon: Bell },
   { id: "settings"  as Section, label: "Settings",      icon: Settings },
 ]
 
@@ -62,15 +66,6 @@ const sectionTitles: Record<Section, { title: string; subtitle: string }> = {
   "admin-users":    { title: "Admin — Users",        subtitle: "Manage all registered patients and roles" },
   "admin-alerts":   { title: "Admin — Alerts",       subtitle: "Broadcast and manage system alerts" },
   "admin-sensors":  { title: "Admin — Sensor Data",  subtitle: "View and export all sensor readings" },
-}
-
-function AlertsPlaceholder() {
-  return (
-    <div className="flex flex-col items-center justify-center h-64 gap-3 text-muted-foreground">
-      <Bell className="h-12 w-12 opacity-30" />
-      <p className="text-sm">Alerts panel coming soon</p>
-    </div>
-  )
 }
 
 function ThemeToggle() {
@@ -97,11 +92,70 @@ export default function Page() {
   const { user, logout } = useAuth()
   const [section, setSection] = useState<Section>("dashboard")
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [headerAqi, setHeaderAqi] = useState<number | null>(null)
+  const [unreadAlerts, setUnreadAlerts] = useState(0)
 
   function navigate(id: Section) {
     setSection(id)
     setMobileOpen(false)
   }
+
+  useEffect(() => {
+    let cancelled = false
+    let viewingKey = getViewingDeviceKey()
+
+    async function load() {
+      try {
+        const cur = viewingKey ? await deviceView.current(viewingKey) : await sensors.current()
+        if (!cancelled) setHeaderAqi(cur.aqi)
+      } catch (e) {
+        if (!cancelled && !(e instanceof ApiError && e.status === 404)) {
+          setHeaderAqi(null)
+        }
+      }
+    }
+    load()
+    const id = setInterval(load, 30_000)
+
+    const onChange = () => { viewingKey = getViewingDeviceKey(); load() }
+    window.addEventListener("viewing-device-change", onChange)
+
+    return () => {
+      cancelled = true
+      clearInterval(id)
+      window.removeEventListener("viewing-device-change", onChange)
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function load() {
+      // Alerts aren't scoped to a shared device — skip while viewing one,
+      // same as the dashboard's own alerts panel.
+      if (getViewingDeviceKey()) {
+        if (!cancelled) setUnreadAlerts(0)
+        return
+      }
+      try {
+        const list = await alertsApi.list(50)
+        if (!cancelled) setUnreadAlerts(list.filter((a) => !a.read).length)
+      } catch {
+        // Not critical enough to block the rest of the UI.
+      }
+    }
+    load()
+    const id = setInterval(load, 30_000)
+
+    window.addEventListener("viewing-device-change", load)
+    return () => {
+      cancelled = true
+      clearInterval(id)
+      window.removeEventListener("viewing-device-change", load)
+    }
+  }, [])
+
+  const headerCategory = headerAqi !== null ? getAqiCategory(headerAqi) : null
 
   const { title, subtitle } = sectionTitles[section]
 
@@ -137,7 +191,7 @@ export default function Page() {
           <div className="mb-2 px-2">
             <p className="text-[10px] font-semibold text-sidebar-foreground/40 uppercase tracking-widest mb-1">Monitor</p>
           </div>
-          {navItems.slice(0, 4).map(({ id, label, icon: Icon, badge }) => {
+          {navItems.slice(0, 4).map(({ id, label, icon: Icon }) => {
             const active = section === id
             return (
               <button
@@ -151,13 +205,7 @@ export default function Page() {
               >
                 <Icon className="h-4 w-4 shrink-0" />
                 <span className="flex-1 text-left">{label}</span>
-                {badge ? (
-                  <Badge className="h-4.5 min-w-4.5 px-1.5 text-[10px] font-bold bg-orange-500 text-white border-0 rounded-full">
-                    {badge}
-                  </Badge>
-                ) : active ? (
-                  <ChevronRight className="h-3.5 w-3.5 opacity-60" />
-                ) : null}
+                {active ? <ChevronRight className="h-3.5 w-3.5 opacity-60" /> : null}
               </button>
             )
           })}
@@ -165,8 +213,9 @@ export default function Page() {
           <div className="mt-4 mb-2 px-2">
             <p className="text-[10px] font-semibold text-sidebar-foreground/40 uppercase tracking-widest mb-1">Manage</p>
           </div>
-          {navItems.slice(4).map(({ id, label, icon: Icon, badge }) => {
+          {navItems.slice(4).map(({ id, label, icon: Icon }) => {
             const active = section === id
+            const badge = id === "alerts" && unreadAlerts > 0 ? unreadAlerts : undefined
             return (
               <button
                 key={id}
@@ -221,8 +270,11 @@ export default function Page() {
         {/* User */}
         <div className="border-t border-sidebar-border px-4 py-4 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-sidebar-primary/20 flex items-center justify-center shrink-0">
-              <User className="h-4 w-4 text-sidebar-primary" />
+            <div className="h-8 w-8 rounded-full bg-sidebar-primary/20 flex items-center justify-center shrink-0 overflow-hidden">
+              {user?.avatar_url
+                ? <img src={user.avatar_url} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                : <User className="h-4 w-4 text-sidebar-primary" />
+              }
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-sidebar-foreground truncate">{user?.name ?? "—"}</p>
@@ -268,23 +320,40 @@ export default function Page() {
 
           <div className="flex items-center gap-2 sm:gap-2">
             {/* AQI chip */}
-            <div className="hidden sm:flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-full px-3 py-1.5">
-              <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-              <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">AQI 87 · Moderate</span>
-            </div>
+            {headerCategory && (
+              <div
+                key={headerAqi}
+                className="hidden sm:flex items-center gap-2 rounded-full px-3 py-1.5 border animate-in fade-in slide-in-from-top-1 duration-300"
+                style={{ backgroundColor: `${headerCategory.color}1A`, borderColor: `${headerCategory.color}4D` }}
+              >
+                <span className="h-2 w-2 rounded-full animate-pulse" style={{ backgroundColor: headerCategory.color }} />
+                <span className="text-xs font-semibold" style={{ color: headerCategory.color }}>
+                  AQI {headerAqi} · {headerCategory.label}
+                </span>
+              </div>
+            )}
 
             {/* Theme toggle */}
             <ThemeToggle />
 
             {/* Notification bell */}
-            <button className="relative h-9 w-9 flex items-center justify-center rounded-xl hover:bg-muted transition-colors">
+            <button
+              onClick={() => navigate("alerts")}
+              className="relative h-9 w-9 flex items-center justify-center rounded-xl hover:bg-muted transition-colors"
+              title="Alerts"
+            >
               <Bell className="h-4 w-4 text-muted-foreground" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-orange-500 border border-background" />
+              {unreadAlerts > 0 && (
+                <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-orange-500 border border-background" />
+              )}
             </button>
 
             {/* Avatar */}
-            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center cursor-pointer hover:bg-primary/30 transition-colors">
-              <User className="h-4 w-4 text-primary-foreground dark:text-primary" />
+            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center cursor-pointer hover:bg-primary/30 transition-colors overflow-hidden">
+              {user?.avatar_url
+                ? <img src={user.avatar_url} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                : <User className="h-4 w-4 text-primary-foreground dark:text-primary" />
+              }
             </div>
           </div>
         </header>
@@ -295,7 +364,7 @@ export default function Page() {
           {section === "live"          && <LiveReadings />}
           {section === "history"       && <HistoryTrends />}
           {section === "symptoms"      && <SymptomLogging />}
-          {section === "alerts"        && <AlertsPlaceholder />}
+          {section === "alerts"        && <AlertsPage />}
           {section === "settings"      && (
             <div className="flex flex-col gap-6">
               <ViewingDeviceCard />
