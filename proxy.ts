@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 // Redirect away from these if already logged in (they're for logging in).
 const AUTH_PATHS = ["/login", "/auth/callback"]
 // Never redirect these either way — accessible with or without a session.
-const PUBLIC_PATHS = ["/device"]
+const PUBLIC_PATHS: string[] = []
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
