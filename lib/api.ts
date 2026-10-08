@@ -18,6 +18,14 @@ export function clearToken() {
   document.cookie = "auth-token=; path=/; max-age=0"
 }
 
+export class ApiError extends Error {
+  status: number
+  constructor(status: number, message: string) {
+    super(message)
+    this.status = status
+  }
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {}
@@ -34,12 +42,12 @@ async function request<T>(
   if (res.status === 401) {
     clearToken()
     window.location.href = "/login"
-    throw new Error("Unauthorized")
+    throw new ApiError(401, "Unauthorized")
   }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`)
+    throw new ApiError(res.status, (body as { error?: string }).error ?? `HTTP ${res.status}`)
   }
 
   return res.json() as Promise<T>
