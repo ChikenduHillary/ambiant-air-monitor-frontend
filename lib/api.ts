@@ -125,6 +125,7 @@ async function deviceRequest<T>(path: string, deviceKey: string): Promise<T> {
 export const deviceView = {
   current: (deviceKey: string) => deviceRequest<SensorReading>("/devices/readings/current", deviceKey),
   hourly: (deviceKey: string) => deviceRequest<SensorReading[]>("/devices/readings/hourly", deviceKey),
+  daily: (deviceKey: string, days: number) => deviceRequest<DailyAggregate[]>(`/devices/readings/daily?days=${days}`, deviceKey),
 }
 
 // ── alerts ───────────────────────────────────────────────────────────────────
