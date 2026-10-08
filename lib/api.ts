@@ -67,6 +67,7 @@ export interface AuthUser {
   patient_id: string
   threshold: number
   role: "user" | "admin"
+  avatar_url: string | null
 }
 
 export interface AuthResponse {

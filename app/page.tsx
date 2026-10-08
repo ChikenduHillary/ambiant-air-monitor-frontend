@@ -221,8 +221,11 @@ export default function Page() {
         {/* User */}
         <div className="border-t border-sidebar-border px-4 py-4 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-sidebar-primary/20 flex items-center justify-center shrink-0">
-              <User className="h-4 w-4 text-sidebar-primary" />
+            <div className="h-8 w-8 rounded-full bg-sidebar-primary/20 flex items-center justify-center shrink-0 overflow-hidden">
+              {user?.avatar_url
+                ? <img src={user.avatar_url} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                : <User className="h-4 w-4 text-sidebar-primary" />
+              }
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-sidebar-foreground truncate">{user?.name ?? "—"}</p>
@@ -283,8 +286,11 @@ export default function Page() {
             </button>
 
             {/* Avatar */}
-            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center cursor-pointer hover:bg-primary/30 transition-colors">
-              <User className="h-4 w-4 text-primary-foreground dark:text-primary" />
+            <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center cursor-pointer hover:bg-primary/30 transition-colors overflow-hidden">
+              {user?.avatar_url
+                ? <img src={user.avatar_url} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                : <User className="h-4 w-4 text-primary-foreground dark:text-primary" />
+              }
             </div>
           </div>
         </header>
