@@ -14,7 +14,9 @@ import {
 import { Wind, FlaskConical, Thermometer, Droplets, Wifi, TrendingUp, TrendingDown, RefreshCw } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { toast } from "sonner"
 import { sensors, ApiError, type SensorReading } from "@/lib/api"
+import { isNewReading } from "@/lib/reading-notifier"
 
 function formatTime(iso: string) {
   const d = new Date(iso)
@@ -162,6 +164,11 @@ export function LiveReadings() {
         setPrev(current)
         setCurrent(cur)
         setLastUpdated(new Date())
+        if (isNewReading(cur.id)) {
+          toast.success(`New reading received — AQI ${cur.aqi}`, {
+            description: `PM2.5 ${cur.pm25.toFixed(1)} µg/m³ · VOC ${cur.voc} ppm`,
+          })
+        }
       } catch (e) {
         // No reading yet isn't an error — leave current null for the empty state.
         if (!cancelled && !(e instanceof ApiError && e.status === 404)) {
