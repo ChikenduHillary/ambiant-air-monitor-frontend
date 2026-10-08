@@ -101,6 +101,14 @@ export function HistoryTrends() {
 
   const chartData = data.map((d) => ({ ...d, date: shortDate(d.date) }))
   const calendarDays = data.slice(-42)
+  // Offset the grid so the first day lands in its real weekday column
+  // instead of always starting at Sunday.
+  const firstDayOffset = calendarDays.length > 0
+    ? (() => {
+        const [y, m, d] = calendarDays[0].date.split("-").map(Number)
+        return new Date(y, m - 1, d).getDay()
+      })()
+    : 0
 
   const avgPm25 = data.length ? +(data.reduce((s, d) => s + d.pm25, 0) / data.length).toFixed(1) : 0
   const avgAqi = data.length ? Math.round(data.reduce((s, d) => s + d.aqi, 0) / data.length) : 0
@@ -227,6 +235,9 @@ export function HistoryTrends() {
                 <div className="grid grid-cols-7 gap-1.5">
                   {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d) => (
                     <div key={d} className="text-center text-[10px] font-medium text-muted-foreground pb-1">{d}</div>
+                  ))}
+                  {Array.from({ length: firstDayOffset }).map((_, i) => (
+                    <div key={`pad-${i}`} />
                   ))}
                   {calendarDays.map((day, i) => (
                     <div
