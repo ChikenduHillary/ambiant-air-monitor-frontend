@@ -149,6 +149,27 @@ export const symptoms = {
     request<SymptomLog>("/symptoms", { method: "POST", body: JSON.stringify(payload) }),
 }
 
+// ── devices ──────────────────────────────────────────────────────────────────
+
+export interface Device {
+  id: number
+  name: string
+  created_at: string
+  last_seen_at: string | null
+}
+
+export interface NewDevice extends Device {
+  // Only ever present in the CreateDevice response — the plaintext key is
+  // never retrievable again once this response is gone.
+  device_key: string
+}
+
+export const devices = {
+  list: () => request<Device[]>("/devices"),
+  create: (name: string) => request<NewDevice>("/devices", { method: "POST", body: JSON.stringify({ name }) }),
+  remove: (id: number) => request<void>(`/devices/${id}`, { method: "DELETE" }),
+}
+
 // ── admin ─────────────────────────────────────────────────────────────────────
 
 export interface AdminStats {

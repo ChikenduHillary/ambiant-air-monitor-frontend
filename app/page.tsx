@@ -28,6 +28,7 @@ import { AdminOverview } from "@/components/admin/admin-overview"
 import { AdminUsers } from "@/components/admin/admin-users"
 import { AdminAlerts } from "@/components/admin/admin-alerts"
 import { AdminSensors } from "@/components/admin/admin-sensors"
+import { DeviceSettings } from "@/components/dashboard/device-settings"
 import { useAuth } from "@/context/auth"
 
 type Section = "dashboard" | "live" | "history" | "symptoms" | "alerts" | "settings"
@@ -67,15 +68,6 @@ function AlertsPlaceholder() {
     <div className="flex flex-col items-center justify-center h-64 gap-3 text-muted-foreground">
       <Bell className="h-12 w-12 opacity-30" />
       <p className="text-sm">Alerts panel coming soon</p>
-    </div>
-  )
-}
-
-function SettingsPlaceholder() {
-  return (
-    <div className="flex flex-col items-center justify-center h-64 gap-3 text-muted-foreground">
-      <Settings className="h-12 w-12 opacity-30" />
-      <p className="text-sm">Settings panel coming soon</p>
     </div>
   )
 }
@@ -303,7 +295,7 @@ export default function Page() {
           {section === "history"       && <HistoryTrends />}
           {section === "symptoms"      && <SymptomLogging />}
           {section === "alerts"        && <AlertsPlaceholder />}
-          {section === "settings"      && <SettingsPlaceholder />}
+          {section === "settings"      && <DeviceSettings />}
           {section === "admin-overview" && <AdminOverview />}
           {section === "admin-users"    && <AdminUsers />}
           {section === "admin-alerts"   && <AdminAlerts />}
