@@ -25,7 +25,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { sensors, alerts as alertsApi, type SensorReading, type Alert } from "@/lib/api"
+import { sensors, alerts as alertsApi, ApiError, type SensorReading, type Alert } from "@/lib/api"
 
 function getAqiCategory(aqi: number) {
   if (aqi <= 50) return { label: "Good", color: "#34d399" }
@@ -142,13 +142,25 @@ export function MainDashboard() {
     let cancelled = false
     async function load() {
       try {
-        const [cur, als] = await Promise.all([sensors.current(), alertsApi.list(6)])
+        const cur = await sensors.current()
         if (cancelled) return
         setPrevReading((p) => p ?? cur)
         setReading((prev) => { setPrevReading(prev); return cur })
-        setAlertList(als)
+        setLoadingErr("")
       } catch (e) {
-        if (!cancelled) setLoadingErr(e instanceof Error ? e.message : "Failed to load data")
+        if (cancelled) return
+        // No readings yet (e.g. a fresh device, or data just cleared) isn't
+        // an error — leave reading null so the empty/skeleton state shows.
+        if (!(e instanceof ApiError && e.status === 404)) {
+          setLoadingErr(e instanceof Error ? e.message : "Failed to load data")
+        }
+      }
+
+      try {
+        const als = await alertsApi.list(6)
+        if (!cancelled) setAlertList(als)
+      } catch {
+        // Alerts failing independently shouldn't block the rest of the dashboard.
       }
     }
     load()

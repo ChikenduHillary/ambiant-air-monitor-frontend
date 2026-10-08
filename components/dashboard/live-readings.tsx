@@ -14,7 +14,7 @@ import {
 import { Wind, FlaskConical, Thermometer, Droplets, Wifi, TrendingUp, TrendingDown, RefreshCw } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { sensors, type SensorReading } from "@/lib/api"
+import { sensors, ApiError, type SensorReading } from "@/lib/api"
 
 function formatTime(iso: string) {
   const d = new Date(iso)
@@ -141,14 +141,26 @@ export function LiveReadings() {
     let cancelled = false
     async function load() {
       try {
-        const [cur, hourly] = await Promise.all([sensors.current(), sensors.hourly()])
+        const hourly = await sensors.hourly()
+        if (cancelled) return
+        setHistory(hourly)
+        setError("")
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load data")
+        return
+      }
+
+      try {
+        const cur = await sensors.current()
         if (cancelled) return
         setPrev(current)
         setCurrent(cur)
-        setHistory(hourly)
         setLastUpdated(new Date())
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load data")
+        // No reading yet isn't an error — leave current null for the empty state.
+        if (!cancelled && !(e instanceof ApiError && e.status === 404)) {
+          setError(e instanceof Error ? e.message : "Failed to load data")
+        }
       }
     }
     load()
@@ -186,7 +198,7 @@ export function LiveReadings() {
         <span className="text-xs text-muted-foreground">
           {lastUpdated
             ? `Updated at ${lastUpdated.toLocaleTimeString()}`
-            : "Loading…"}
+            : "Waiting for data…"}
         </span>
       </div>
 
@@ -196,7 +208,7 @@ export function LiveReadings() {
           ? Array.from({ length: 4 }).map((_, i) => (
               <Card key={i} className="border shadow-sm">
                 <CardContent className="p-5 h-36 flex items-center justify-center text-muted-foreground text-sm">
-                  Loading…
+                  Waiting for data…
                 </CardContent>
               </Card>
             ))
