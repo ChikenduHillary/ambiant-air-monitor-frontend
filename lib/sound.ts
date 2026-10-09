@@ -1,9 +1,12 @@
+import { isSoundEnabled } from "@/lib/sound-pref"
+
 let audioCtx: AudioContext | null = null
 
 // A short two-tone beep — no audio file needed. Browsers suspend new audio
 // contexts until the page has seen a user gesture, which by the time an
 // alert fires has almost always already happened.
 export function playAlertSound() {
+  if (!isSoundEnabled()) return
   try {
     const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
     if (!Ctx) return

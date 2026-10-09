@@ -30,6 +30,7 @@ import { AdminAlerts } from "@/components/admin/admin-alerts"
 import { AdminSensors } from "@/components/admin/admin-sensors"
 import { DeviceSettings } from "@/components/dashboard/device-settings"
 import { ViewingDeviceCard } from "@/components/dashboard/viewing-device-card"
+import { PreferencesCard } from "@/components/dashboard/preferences-card"
 import { AlertsPage } from "@/components/dashboard/alerts-page"
 import { ProfilePage } from "@/components/dashboard/profile-page"
 import { useAuth } from "@/context/auth"
@@ -387,6 +388,7 @@ export default function Page() {
             <div className="flex flex-col gap-6">
               <ViewingDeviceCard />
               <DeviceSettings />
+              <PreferencesCard />
             </div>
           )}
           {section === "admin-overview" && <AdminOverview />}
