@@ -54,8 +54,8 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex flex-col items-center gap-3 mb-8">
-          <div className="h-14 w-14 rounded-2xl bg-primary/15 flex items-center justify-center">
-            <Wind className="h-7 w-7 text-primary" />
+          <div className="h-14 w-14 rounded-2xl bg-foreground flex items-center justify-center">
+            <Wind className="h-7 w-7 text-background" />
           </div>
           <div className="text-center">
             <h1 className="text-2xl font-bold tracking-tight text-foreground">AeroGuard</h1>
