@@ -30,12 +30,15 @@ import { AdminAlerts } from "@/components/admin/admin-alerts"
 import { AdminSensors } from "@/components/admin/admin-sensors"
 import { DeviceSettings } from "@/components/dashboard/device-settings"
 import { ViewingDeviceCard } from "@/components/dashboard/viewing-device-card"
+import { PreferencesCard } from "@/components/dashboard/preferences-card"
 import { AlertsPage } from "@/components/dashboard/alerts-page"
 import { ProfilePage } from "@/components/dashboard/profile-page"
 import { useAuth } from "@/context/auth"
 import { sensors, deviceView, alerts as alertsApi, ApiError } from "@/lib/api"
 import { getViewingDeviceKey } from "@/lib/viewing-device"
 import { getAqiCategory } from "@/lib/aqi"
+import { hasNewAlert } from "@/lib/alert-notifier"
+import { playAlertSound } from "@/lib/sound"
 
 type Section = "dashboard" | "live" | "history" | "symptoms" | "alerts" | "profile" | "settings"
              | "admin-overview" | "admin-users" | "admin-alerts" | "admin-sensors"
@@ -142,7 +145,10 @@ export default function Page() {
       }
       try {
         const list = await alertsApi.list(50)
-        if (!cancelled) setUnreadAlerts(list.filter((a) => !a.read).length)
+        if (cancelled) return
+        const unread = list.filter((a) => !a.read)
+        if (hasNewAlert(unread.map((a) => a.id))) playAlertSound()
+        setUnreadAlerts(unread.length)
       } catch {
         // Not critical enough to block the rest of the UI.
       }
@@ -172,8 +178,8 @@ export default function Page() {
       >
         {/* Logo */}
         <div className="flex h-16 items-center gap-3 px-5 border-b border-sidebar-border shrink-0">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sidebar-primary/20">
-            <Wind className="h-5 w-5 text-sidebar-primary" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-foreground">
+            <Wind className="h-5 w-5 text-background" />
           </div>
           <div>
             <span className="text-base font-bold tracking-tight text-sidebar-foreground">AeroGuard</span>
@@ -382,6 +388,7 @@ export default function Page() {
             <div className="flex flex-col gap-6">
               <ViewingDeviceCard />
               <DeviceSettings />
+              <PreferencesCard />
             </div>
           )}
           {section === "admin-overview" && <AdminOverview />}
