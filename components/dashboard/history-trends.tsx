@@ -32,6 +32,13 @@ function daysBetween(a: string, b: string): number {
   return Math.round((db - da) / 86400000)
 }
 
+// Local date, not UTC — matches how the API's "YYYY-MM-DD" strings are
+// parsed elsewhere in this file, so "today" can't drift a day off near midnight.
+function todayStr() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+}
+
 function getHeatColor(aqi: number) {
   if (aqi <= 50) return "bg-emerald-500"
   if (aqi <= 75) return "bg-emerald-400"
@@ -113,6 +120,7 @@ export function HistoryTrends() {
 
   const chartData = data.map((d) => ({ ...d, date: shortDate(d.date) }))
   const calendarDays = data.slice(-42)
+  const today = todayStr()
   // Build the grid as real calendar cells — padding before the first day
   // for its weekday, plus padding for any gap days with no data — instead
   // of just laying calendarDays out consecutively, which drifts out of
@@ -266,8 +274,8 @@ export function HistoryTrends() {
                     ) : (
                       <div
                         key={cell.day.date}
-                        title={`${cell.day.date} — AQI ${cell.day.aqi}${cell.day.symptoms ? ` · ${cell.day.symptoms} symptom event(s)` : ""}`}
-                        className={`relative h-10 rounded-lg ${getHeatColor(cell.day.aqi)} ${getHeatOpacity(cell.day.aqi)} flex flex-col items-center justify-center cursor-default hover:opacity-100 transition-opacity`}
+                        title={`${cell.day.date}${cell.day.date === today ? " (today)" : ""} — AQI ${cell.day.aqi}${cell.day.symptoms ? ` · ${cell.day.symptoms} symptom event(s)` : ""}`}
+                        className={`relative h-10 rounded-lg ${getHeatColor(cell.day.aqi)} ${getHeatOpacity(cell.day.aqi)} flex flex-col items-center justify-center cursor-default hover:opacity-100 transition-opacity ${cell.day.date === today ? "ring-2 ring-white ring-inset" : ""}`}
                       >
                         <span className="text-[9px] text-white font-bold drop-shadow-sm">{cell.day.aqi}</span>
                         {cell.day.symptoms > 0 && (
@@ -294,6 +302,10 @@ export function HistoryTrends() {
                   <div className="flex items-center gap-1 ml-3">
                     <span className="h-2 w-2 rounded-full bg-foreground/60" />
                     <span className="text-[10px] text-muted-foreground">Symptom event</span>
+                  </div>
+                  <div className="flex items-center gap-1 ml-3">
+                    <span className="h-3 w-3 rounded-sm bg-muted ring-2 ring-white ring-inset" />
+                    <span className="text-[10px] text-muted-foreground">Today</span>
                   </div>
                 </div>
               </>
