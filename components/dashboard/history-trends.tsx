@@ -20,6 +20,18 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { sensors, deviceView, type DailyAggregate } from "@/lib/api"
 import { getViewingDeviceKey } from "@/lib/viewing-device"
 
+// Days with no sensor readings are simply absent from the API response
+// (no zero-fill), so consecutive entries can skip calendar days. Counting
+// elapsed days between them (not just array position) keeps every cell in
+// its true weekday column.
+function daysBetween(a: string, b: string): number {
+  const [ay, am, ad] = a.split("-").map(Number)
+  const [by, bm, bd] = b.split("-").map(Number)
+  const da = new Date(ay, am - 1, ad).getTime()
+  const db = new Date(by, bm - 1, bd).getTime()
+  return Math.round((db - da) / 86400000)
+}
+
 function getHeatColor(aqi: number) {
   if (aqi <= 50) return "bg-emerald-500"
   if (aqi <= 75) return "bg-emerald-400"
@@ -101,14 +113,26 @@ export function HistoryTrends() {
 
   const chartData = data.map((d) => ({ ...d, date: shortDate(d.date) }))
   const calendarDays = data.slice(-42)
-  // Offset the grid so the first day lands in its real weekday column
-  // instead of always starting at Sunday.
-  const firstDayOffset = calendarDays.length > 0
-    ? (() => {
-        const [y, m, d] = calendarDays[0].date.split("-").map(Number)
-        return new Date(y, m - 1, d).getDay()
-      })()
-    : 0
+  // Build the grid as real calendar cells — padding before the first day
+  // for its weekday, plus padding for any gap days with no data — instead
+  // of just laying calendarDays out consecutively, which drifts out of
+  // weekday alignment as soon as one day in the middle is missing.
+  const calendarCells: ({ pad: true } | { pad: false; day: DailyAggregate })[] = []
+  if (calendarDays.length > 0) {
+    const [y0, m0, d0] = calendarDays[0].date.split("-").map(Number)
+    const firstWeekday = new Date(y0, m0 - 1, d0).getDay()
+    for (let i = 0; i < firstWeekday; i++) calendarCells.push({ pad: true })
+
+    let prevDate: string | null = null
+    for (const day of calendarDays) {
+      if (prevDate) {
+        const gap = daysBetween(prevDate, day.date) - 1
+        for (let i = 0; i < gap; i++) calendarCells.push({ pad: true })
+      }
+      calendarCells.push({ pad: false, day })
+      prevDate = day.date
+    }
+  }
 
   const avgPm25 = data.length ? +(data.reduce((s, d) => s + d.pm25, 0) / data.length).toFixed(1) : 0
   const avgAqi = data.length ? Math.round(data.reduce((s, d) => s + d.aqi, 0) / data.length) : 0
@@ -236,21 +260,22 @@ export function HistoryTrends() {
                   {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d) => (
                     <div key={d} className="text-center text-[10px] font-medium text-muted-foreground pb-1">{d}</div>
                   ))}
-                  {Array.from({ length: firstDayOffset }).map((_, i) => (
-                    <div key={`pad-${i}`} />
-                  ))}
-                  {calendarDays.map((day, i) => (
-                    <div
-                      key={i}
-                      title={`${day.date} — AQI ${day.aqi}${day.symptoms ? ` · ${day.symptoms} symptom event(s)` : ""}`}
-                      className={`relative h-10 rounded-lg ${getHeatColor(day.aqi)} ${getHeatOpacity(day.aqi)} flex flex-col items-center justify-center cursor-default hover:opacity-100 transition-opacity`}
-                    >
-                      <span className="text-[9px] text-white font-bold drop-shadow-sm">{day.aqi}</span>
-                      {day.symptoms > 0 && (
-                        <span className="absolute bottom-1 right-1 h-1.5 w-1.5 rounded-full bg-white/90 shadow-sm" />
-                      )}
-                    </div>
-                  ))}
+                  {calendarCells.map((cell, i) =>
+                    cell.pad ? (
+                      <div key={`pad-${i}`} />
+                    ) : (
+                      <div
+                        key={cell.day.date}
+                        title={`${cell.day.date} — AQI ${cell.day.aqi}${cell.day.symptoms ? ` · ${cell.day.symptoms} symptom event(s)` : ""}`}
+                        className={`relative h-10 rounded-lg ${getHeatColor(cell.day.aqi)} ${getHeatOpacity(cell.day.aqi)} flex flex-col items-center justify-center cursor-default hover:opacity-100 transition-opacity`}
+                      >
+                        <span className="text-[9px] text-white font-bold drop-shadow-sm">{cell.day.aqi}</span>
+                        {cell.day.symptoms > 0 && (
+                          <span className="absolute bottom-1 right-1 h-1.5 w-1.5 rounded-full bg-white/90 shadow-sm" />
+                        )}
+                      </div>
+                    )
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 mt-4 flex-wrap">
